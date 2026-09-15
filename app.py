@@ -19,31 +19,31 @@ uploaded_file1 = st.sidebar.file_uploader("Upload Image 1 (Left)", type=["jpg", 
 uploaded_file2 = st.sidebar.file_uploader("Upload Image 2 (Right)", type=["jpg", "png", "jpeg"])
 
 if uploaded_file1 and uploaded_file2:
-    # แปลงไฟล์เป็นรูปแบบ OpenCV Image
+    # แปลงไฟล์เป็นรูปแบบ OpenCV Image (เติม np.uint8 แก้ไขแล้ว)
     file_bytes1 = np.asarray(bytearray(uploaded_file1.read()), dtype=np.uint8)
     img1 = cv2.imdecode(file_bytes1, cv2.IMREAD_COLOR)
     
     file_bytes2 = np.asarray(bytearray(uploaded_file2.read()), dtype=np.uint8)
     img2 = cv2.imdecode(file_bytes2, cv2.IMREAD_COLOR)
 
-    # แสดงภาพต้นฉบับ 2 ภาพข้างกัน
+    # แสดงภาพต้นฉบับ 2 ภาพข้างกัน (ใช้ use_container_width=True แก้ไขแล้ว)
     col1, col2 = st.columns(2)
     with col1:
-        st.image(cv2.cvtColor(img1, cv2.COLOR_BGR2RGB), caption="Image 1 (Left)", use_column_width=True)
+        st.image(cv2.cvtColor(img1, cv2.COLOR_BGR2RGB), caption="Image 1 (Left)", use_container_width=True)
     with col2:
-        st.image(cv2.cvtColor(img2, cv2.COLOR_BGR2RGB), caption="Image 2 (Right)", use_column_width=True)
+        st.image(cv2.cvtColor(img2, cv2.COLOR_BGR2RGB), caption="Image 2 (Right)", use_container_width=True)
 
     # ปุ่มประมวลผล
     if st.button("Generate Panorama"):
         with st.spinner("Processing Panorama Stitching..."):
-            # เรียกใช้ Pipeline (เมื่อ Member 1-3 เขียนเสร็จแล้ว)
+            # เรียกใช้ Pipeline
             kp1, kp2, matches, vis_matches = extract_and_match(img1, img2)
             H, mask = compute_homography(kp1, kp2, matches)
             result = blend_images(img1, img2, H)
 
             # แสดงภาพจับคู่จุด Inliers และภาพผลลัพธ์ Panorama
             st.subheader("Feature Matching (Inliers)")
-            st.image(cv2.cvtColor(vis_matches, cv2.COLOR_BGR2RGB), use_column_width=True)
+            st.image(cv2.cvtColor(vis_matches, cv2.COLOR_BGR2RGB), use_container_width=True)
 
             st.subheader("Final Panorama Result")
-            st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB), use_column_width=True)
+            st.image(cv2.cvtColor(result, cv2.COLOR_BGR2RGB), use_container_width=True)
