@@ -25,15 +25,18 @@
 
 ---
 
-## โครงสร้างโฟลเดอร์ใน Repository
+## 📁 โครงสร้างโฟลเดอร์ใน Repository
+
+```text
 CP461-Panorama-Stitcher/
 ├── app.py              # ไฟล์หลักสำหรับรันหน้าเว็บ Streamlit UI และรวม Pipeline
 ├── requirements.txt    # รายการไลบรารีที่ระบบต้องใช้
 ├── README.md           # เอกสารอธิบายโปรเจกต์
 └── src/                # โมดูลประมวลผล Computer Vision
-├── feature.py      # ฟังก์ชันสกัดจุดเด่นและจับคู่ภาพ 
-├── homography.py   # ฟังก์ชันคำนวณ Homography และ RANSAC 
-└── blending.py     # ฟังก์ชันปรับมุมและรวมภาพ 
+    ├── feature.py      # ฟังก์ชันสกัดจุดเด่นและจับคู่ภาพ 
+    ├── homography.py   # ฟังก์ชันคำนวณ Homography และ RANSAC 
+    └── blending.py     # ฟังก์ชันปรับมุมและรวมภาพ 
+```
 
 ##  ขั้นตอนการติดตั้งและรันบนเครื่องตัวเอง (Local)
 
