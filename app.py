@@ -20,10 +20,10 @@ uploaded_file2 = st.sidebar.file_uploader("Upload Image 2 (Right)", type=["jpg",
 
 if uploaded_file1 and uploaded_file2:
     # แปลงไฟล์เป็นรูปแบบ OpenCV Image
-    file_bytes1 = np.asarray(bytearray(uploaded_file1.read()), dtype=uint8)
+    file_bytes1 = np.asarray(bytearray(uploaded_file1.read()), dtype=np.uint8)
     img1 = cv2.imdecode(file_bytes1, cv2.IMREAD_COLOR)
     
-    file_bytes2 = np.asarray(bytearray(uploaded_file2.read()), dtype=uint8)
+    file_bytes2 = np.asarray(bytearray(uploaded_file2.read()), dtype=np.uint8)
     img2 = cv2.imdecode(file_bytes2, cv2.IMREAD_COLOR)
 
     # แสดงภาพต้นฉบับ 2 ภาพข้างกัน
