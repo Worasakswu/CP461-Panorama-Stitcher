@@ -17,7 +17,7 @@
 
 ---
 
-## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
+##  เทคโนโลยีที่ใช้ (Tech Stack)
 
 * **ภาษาหลัก:** Python 3.10+
 * **Computer Vision & Math:** OpenCV (`opencv-python-headless`), NumPy
@@ -25,7 +25,7 @@
 
 ---
 
-## 📁 โครงสร้างโฟลเดอร์ใน Repository
+##  โครงสร้างโฟลเดอร์ใน Repository
 
 ```text
 CP461-Panorama-Stitcher/
