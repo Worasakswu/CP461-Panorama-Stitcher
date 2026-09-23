@@ -1,0 +1,10 @@
+[server]
+# ขนาดสูงสุดต่อไฟล์ (MB) รองรับภาพจากมือถือความละเอียดสูง
+maxUploadSize = 50
+
+[theme]
+primaryColor = "#3F5BD9"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F7FB"
+textColor = "#172033"
+font = "sans serif"
