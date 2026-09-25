@@ -1,10 +1,12 @@
+from pathlib import Path
+
 import cv2
 import numpy as np
 import pytest
 
 from src.blending import gain_compensation, largest_valid_rectangle, multiband_blend, feather_blend, seam_labels
 from src.feature import detect_features, match_features
-from src.homography import estimate_transform, focals_from_homography, centered, transform_is_plausible
+from src.homography import centered, estimate_focal, estimate_transform, focals_from_homography, transform_is_plausible
 from src.image_io import decode_image, encode_image
 from src.stitcher import StitchError, StitchSettings, stitch
 from src.synthetic import make_planar_set, make_rotation_set, make_scene
@@ -114,6 +116,28 @@ def test_focal_length_from_rotation_homography():
     np.testing.assert_allclose(shifted, np.eye(3))
 
 
+def test_focal_estimate_is_stable_for_pure_horizontal_rotation():
+    # กล้องหมุนแนวนอนล้วน ๆ ทำให้สูตร f₀ หารด้วยค่าใกล้ 0 (บั๊กที่พบจากชุดภาพ city)
+    focal = 1000.0
+    camera = np.array([[focal, 0, 0], [0, focal, 0], [0, 0, 1]])
+    rng = np.random.default_rng(2)
+    homographies = []
+    for yaw in (9, 10, 12, 8, 11):
+        rotation = cv2.Rodrigues(np.array([0.0, np.radians(yaw), 0.0]))[0]
+        matrix = camera @ rotation @ np.linalg.inv(camera)
+        homographies.append(matrix * (1 + rng.normal(0, 1e-4, (3, 3))))
+    estimate, ok = estimate_focal(homographies, (1200, 800))
+    assert ok
+    assert estimate == pytest.approx(focal, rel=0.03)
+
+
+def test_focal_estimate_rejects_non_rotational_homographies():
+    # homography ของฉากระนาบที่กล้องเลื่อนตำแหน่ง ไม่ใช่กล้องหมุน จึงไม่มี focal ที่อธิบายได้
+    shear = np.array([[1.1, 0.25, 150.0], [0.05, 0.8, 20.0], [4e-4, 1e-4, 1.0]])
+    estimate, ok = estimate_focal([shear, shear], (1200, 800))
+    assert not ok
+
+
 def test_two_images_in_reverse_order_are_stitched_accurately():
     synthetic = make_planar_set(count=2, seed=21)
     order = [1, 0]  # อัปโหลดภาพขวาก่อน (โค้ดเวอร์ชันแรกตัดภาพซ้ายทิ้ง)
@@ -210,3 +234,25 @@ def test_largest_valid_rectangle_excludes_black_border():
     x, y, width, height = largest_valid_rectangle(mask)
     assert mask[y:y + height, x:x + width].all()
     assert width * height > 0.8 * np.count_nonzero(mask)
+
+
+REAL_SETS = Path(__file__).resolve().parents[1] / "test_images"
+
+
+def _load_real_set(name):
+    files = sorted((REAL_SETS / name).glob("*.jpg"))
+    if len(files) < 2:
+        pytest.skip(f"ไม่มีชุดภาพ test_images/{name}")
+    return [decode_image(file.read_bytes(), 1200)[0] for file in files]
+
+
+@pytest.mark.parametrize("name, projection", [("house", "planar"), ("class", "planar"), ("city", "cylindrical")])
+def test_real_image_sets_are_fully_stitched(name, projection):
+    images = _load_real_set(name)
+    result = stitch(images, StitchSettings())
+    assert sorted(result.included) == list(range(len(images)))
+    assert result.projection == projection
+    if projection == "cylindrical":
+        assert result.focal_estimated
+        # กล้อง Nikon D90 ของชุด city: focal ประมาณ 1,000 px ที่ภาพกว้าง 1,200 px
+        assert 850 < result.focal < 1150

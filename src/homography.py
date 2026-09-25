@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 
 MODELS = ("homography", "similarity")
+STRONG_INLIERS = 100
 
 
 @dataclass
@@ -77,9 +78,11 @@ def estimate_transform(
 
     reason = None
     # เกณฑ์ของ Brown & Lowe (2007): inliers ต้องมากพอเมื่อเทียบกับจำนวนคู่ทั้งหมด
+    # ยกเว้นเมื่อ inliers มากจนเป็นความบังเอิญไม่ได้ ภาพจริงที่มีวัตถุใกล้กล้อง (parallax)
+    # หรือคนเดินผ่านจะมี outliers เยอะแม้ภาพซ้อนกันจริง
     if num_inliers < min_inliers:
         reason = f"inliers น้อยเกินไป ({num_inliers} < {min_inliers})"
-    elif num_inliers <= 8 + 0.3 * count:
+    elif num_inliers <= 8 + 0.3 * count and num_inliers < STRONG_INLIERS:
         reason = f"สัดส่วน inliers ต่ำเกินไป ({num_inliers}/{count}) อาจเป็นคู่ภาพที่ไม่ได้ซ้อนทับกัน"
     elif source_size is not None:
         plausible, why = transform_is_plausible(matrix, *source_size)
@@ -172,20 +175,50 @@ def focals_from_homography(matrix: np.ndarray) -> tuple[float | None, float | No
     return first, second
 
 
+def rotation_residual(matrix: np.ndarray, focal: float) -> float:
+    """ถ้ากล้องหมุนรอบจุดเดิม H = K·R·K⁻¹ ดังนั้น K⁻¹·H·K ต้องเป็นเมทริกซ์การหมุน (คูณสเกล)
+
+    คืน ‖M·Mᵀ − I‖ หลังหารสเกลออก ค่ายิ่งใกล้ 0 ยิ่งแปลว่า focal นี้อธิบาย H ได้ดี (สูงสุด 1)
+    """
+    camera = np.diag([focal, focal, 1.0])
+    rotation = np.linalg.inv(camera) @ matrix @ camera
+    determinant = np.linalg.det(rotation)
+    if not np.isfinite(determinant) or determinant <= 0:
+        return 1.0
+    rotation = rotation / np.cbrt(determinant)
+    return min(float(np.linalg.norm(rotation @ rotation.T - np.eye(3))), 1.0)
+
+
 def estimate_focal(centered_homographies: list[np.ndarray], image_size: tuple[int, int]) -> tuple[float, bool]:
-    """หาค่า focal length จากหลายคู่ภาพ (ค่ามัธยฐาน) คืน (focal, ประมาณได้จริงหรือไม่)"""
+    """หา focal length เดียวที่ทำให้ทุกคู่ภาพสอดคล้องกับกล้องที่หมุนรอบจุดเดิมที่สุด
+
+    ผู้สมัครมาจากสูตรของ Szeliski & Shum และค่าที่ไล่ละเอียดในช่วง 0.3–5 เท่าของด้านยาวภาพ
+    (สูตรอย่างเดียวไม่เสถียรเมื่อกล้องหมุนแนวนอนล้วน ๆ เพราะตัวหารเข้าใกล้ 0)
+    คืน (focal, ประมาณได้จริงหรือไม่)
+    """
     longest = max(image_size)
-    estimates = []
+    fallback = 0.9 * longest  # ใกล้เลนส์มุมกว้างของมือถือ (มุมรับภาพแนวนอน ~58°)
+    if not centered_homographies:
+        return fallback, False
+
+    low, high = 0.3 * longest, 5.0 * longest
+    candidates = list(np.geomspace(low, high, 300))
     for matrix in centered_homographies:
-        first, second = focals_from_homography(matrix)
-        if first and second and np.isfinite(first) and np.isfinite(second):
-            focal = float(np.sqrt(first * second))
-            if 0.3 * longest <= focal <= 5.0 * longest:
-                estimates.append(focal)
-    if estimates:
-        return float(np.median(estimates)), True
-    # ค่าเริ่มต้นใกล้เลนส์มุมกว้างของมือถือ (มุมรับภาพแนวนอน ~58°)
-    return 0.9 * longest, False
+        for focal in focals_from_homography(matrix):
+            if focal and np.isfinite(focal) and low <= focal <= high:
+                candidates.append(focal)
+
+    def cost(focal: float) -> float:
+        return float(np.mean([rotation_residual(matrix, focal) for matrix in centered_homographies]))
+
+    best = min(candidates, key=cost)
+    fine = np.linspace(0.97 * best, 1.03 * best, 61)
+    best = float(min(fine, key=cost))
+    median_residual = float(np.median([rotation_residual(matrix, best) for matrix in centered_homographies]))
+    # ภาพที่ไม่ได้มาจากกล้องหมุน (เช่นเดินถ่ายฉากระนาบ) จะไม่มี focal ไหนทำให้ residual ต่ำ
+    if median_residual > 0.3 or not (1.01 * low < best < 0.99 * high):
+        return fallback, False
+    return best, True
 
 
 def _translation(tx: float, ty: float) -> np.ndarray:

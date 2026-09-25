@@ -415,8 +415,9 @@ def run_real(folder: Path) -> str:
         tree = [pair.used_estimate(result.projection) for pair in result.pairs if pair.in_tree]
         cv2.imwrite(str(OUTPUT / "real" / f"{path.name}.jpg"), result.panorama)
         notes = "; ".join(result.warnings) or "-"
+        projection = result.projection + (f" (f = {result.focal:.0f} px)" if result.focal else "")
         lines.append(
-            f"| {path.name} | {len(images)} | {len(result.included)} | {result.projection} "
+            f"| {path.name} | {len(images)} | {len(result.included)} | {projection} "
             f"| {mean(e.num_inliers for e in tree):.0f} | {100 * mean(e.inlier_ratio for e in tree):.0f}% "
             f"| {mean(e.reprojection_rmse for e in tree):.2f} | {result.timings['total']:.2f} | {notes} |"
         )

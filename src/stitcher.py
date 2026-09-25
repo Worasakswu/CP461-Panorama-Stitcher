@@ -24,7 +24,7 @@ from src.warping import (
 )
 
 PROJECTIONS = ("auto", "planar", "cylindrical")
-MAX_IMAGES = 10
+MAX_IMAGES = 8
 
 
 @dataclass(frozen=True)
@@ -390,7 +390,7 @@ def _planar_problem(transforms: dict[int, np.ndarray], sizes: list[tuple[int, in
     for index, matrix in transforms.items():
         plausible, reason = transform_is_plausible(matrix, *sizes[index], max_area_ratio=8.0, max_depth_ratio=4.0)
         if not plausible:
-            return f"ภาพ {index + 1} {reason}"
+            return f"{reason} (ภาพ {index + 1})"
     return None
 
 

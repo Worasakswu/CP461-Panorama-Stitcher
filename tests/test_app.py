@@ -18,9 +18,10 @@ def test_empty_upload_shows_start_prompt():
     assert app.info
 
 
-def test_demo_images_produce_panorama_and_comparison():
+def test_synthetic_samples_produce_panorama_and_comparison():
     app = AppTest.from_file(APP).run(timeout=30)
-    app.radio[0].set_value("ใช้ภาพตัวอย่าง (สังเคราะห์)").run(timeout=60)
+    app.radio[0].set_value("ใช้ชุดภาพตัวอย่าง").run(timeout=60)
+    app.selectbox[0].set_value("ภาพจำลอง (สังเคราะห์)").run(timeout=60)
     app.button[0].click().run(timeout=120)
     assert not app.exception
     assert not app.error
@@ -34,6 +35,19 @@ def test_demo_images_produce_panorama_and_comparison():
     headings = [block.value for block in app.markdown]
     assert "**Multi-band**" in headings
     assert "**วางทับ (เวอร์ชันแรก)**" in headings
+
+
+def test_real_sample_set_with_shuffle_and_distractor():
+    app = AppTest.from_file(APP).run(timeout=30)
+    app.radio[0].set_value("ใช้ชุดภาพตัวอย่าง").run(timeout=60)
+    app.selectbox[0].set_value("house").run(timeout=60)
+    app.toggle[0].set_value(True)  # สลับลำดับภาพ
+    app.toggle[1].set_value(True).run(timeout=60)  # เพิ่มภาพแปลกปลอม
+    app.button[0].click().run(timeout=180)
+    assert not app.exception
+    assert not app.error
+    assert any(metric.label == "ภาพที่ต่อได้" and metric.value == "5/6" for metric in app.metric)
+    assert any("ไม่ถูกนำมาต่อ" in block.value for block in app.warning)
 
 
 def test_uploaded_files_are_stitched():

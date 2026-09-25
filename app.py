@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import random
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -37,6 +39,11 @@ BLEND_LABELS = {
     "none": "ไม่ blend (วางทับแบบเวอร์ชันแรก)",
 }
 SHORT_BLEND_LABELS = {"none": "วางทับ (เวอร์ชันแรก)", "feather": "Feather", "multiband": "Multi-band"}
+UPLOAD_SOURCE = "อัปโหลดภาพของฉัน"
+SAMPLE_SOURCE = "ใช้ชุดภาพตัวอย่าง"
+SYNTHETIC_SAMPLE = "ภาพจำลอง (สังเคราะห์)"
+SAMPLE_ROOT = Path(__file__).resolve().parent / "test_images"
+IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png", ".webp")
 TIMING_LABELS = {
     "features": "ตรวจหา keypoints + descriptors",
     "matching": "จับคู่ KNN + ratio test + RANSAC ทุกคู่ภาพ",
@@ -51,7 +58,7 @@ TIMING_LABELS = {
 st.title("📷 Automatic Panorama Stitcher")
 st.caption("CP461 Introduction to Computer Vision · ต่อภาพหลายภาพเป็นพาโนรามาไร้รอยต่อโดยอัตโนมัติ")
 st.markdown(
-    '<span class="step">1 อัปโหลด 2–10 ภาพ (ลำดับใดก็ได้)</span>'
+    f'<span class="step">1 อัปโหลด 2–{MAX_IMAGES} ภาพ (ลำดับใดก็ได้)</span>'
     '<span class="step">2 SIFT/ORB + Lowe\'s ratio test</span>'
     '<span class="step">3 RANSAC Homography</span>'
     '<span class="step">4 Warping + Exposure compensation</span>'
@@ -74,24 +81,52 @@ def demo_images() -> list[np.ndarray]:
     return make_demo_set()
 
 
-source = st.radio(
-    "แหล่งภาพ", ["อัปโหลดภาพของฉัน", "ใช้ภาพตัวอย่าง (สังเคราะห์)"], horizontal=True, label_visibility="collapsed"
-)
+def sample_sets() -> dict[str, list[Path]]:
+    """ชุดภาพตัวอย่างใน test_images/ (โฟลเดอร์ละ 1 ชุด ต้องมีอย่างน้อย 2 ภาพ)"""
+    sets = {}
+    if SAMPLE_ROOT.is_dir():
+        for folder in sorted(path for path in SAMPLE_ROOT.iterdir() if path.is_dir()):
+            files = sorted(path for path in folder.iterdir() if path.suffix.lower() in IMAGE_SUFFIXES)
+            if len(files) >= 2:
+                sets[folder.name] = files
+    return sets
+
+
+def shuffled_order(count: int) -> list[int]:
+    order = list(range(count))
+    generator = random.Random(461)
+    while count > 1 and order == sorted(order):
+        generator.shuffle(order)
+    return order
+
+
+source = st.radio("แหล่งภาพ", [UPLOAD_SOURCE, SAMPLE_SOURCE], horizontal=True, label_visibility="collapsed")
 uploaded_files = []
-if source == "อัปโหลดภาพของฉัน":
+samples = sample_sets()
+if source == UPLOAD_SOURCE:
     uploaded_files = st.file_uploader(
         "ลากภาพมาวาง หรือกดเพื่อเลือกหลายไฟล์พร้อมกัน",
         type=["jpg", "jpeg", "png", "webp"],
         accept_multiple_files=True,
         help="ภาพติดกันควรซ้อนทับกันราว 30–50% ไม่ต้องเรียงลำดับ ระบบหาลำดับให้เอง",
     ) or []
-    with st.expander("เคล็ดลับการถ่ายภาพให้ต่อได้สวย"):
+    with st.expander("เคล็ดลับการเลือกภาพให้ต่อได้สวย"):
         st.markdown(
-            "- ยืนอยู่กับที่แล้ว **หมุนกล้อง** ไปทางซ้าย/ขวา อย่าเดินขยับ (ลด parallax)\n"
-            "- ให้ภาพที่อยู่ติดกันมีส่วนซ้อนทับกันประมาณ 30–50%\n"
-            "- ล็อกค่าแสง/โฟกัสถ้าทำได้ และหลีกเลี่ยงวัตถุที่เคลื่อนที่ในส่วนซ้อนทับ\n"
+            "- ใช้ภาพชุดที่ถ่ายจากจุดเดียวกันโดย **หมุนกล้อง** ไปทางซ้าย/ขวา ไม่ได้เดินขยับ (ลด parallax)\n"
+            "- ถ้าหาภาพจากอินเทอร์เน็ต ให้เลือกชุดที่ตั้งใจถ่ายไว้ทำพาโนรามา (ภาพต่อเนื่องจากกล้องตัวเดียว)\n"
+            "- ภาพที่อยู่ติดกันควรซ้อนทับกันประมาณ 30–50%\n"
             "- ฉากที่มีรายละเอียด (ตึก ต้นไม้ ป้าย) ต่อได้ดีกว่าท้องฟ้าหรือผนังเรียบ"
         )
+else:
+    sample_choice, shuffle_column, distractor_column = st.columns([2, 1, 1], vertical_alignment="bottom")
+    sample_name = sample_choice.selectbox(
+        "ชุดภาพตัวอย่าง", list(samples) + [SYNTHETIC_SAMPLE],
+        help="ภาพจริงจากโฟลเดอร์ test_images/ ใน repo หรือภาพจำลองที่สร้างขึ้นเอง",
+    )
+    shuffle_samples = shuffle_column.toggle("สลับลำดับภาพ", help="ทดสอบว่าระบบหาลำดับซ้าย→ขวาได้เอง")
+    add_distractor = distractor_column.toggle(
+        "เพิ่มภาพแปลกปลอม", disabled=not samples, help="แทรกภาพจากชุดอื่น 1 ภาพ ทดสอบว่าระบบตัดภาพนั้นทิ้งได้"
+    )
 preview_area = st.container()
 
 with st.expander("⚙️ ตั้งค่าขั้นสูง (สำหรับสาธิตผลของแต่ละขั้นตอน)"):
@@ -133,9 +168,9 @@ settings = StitchSettings(
 images: list[np.ndarray] = []
 names: list[str] = []
 digests: list[str] = []
-if source == "อัปโหลดภาพของฉัน":
+if source == UPLOAD_SOURCE:
     if not uploaded_files:
-        st.info("เริ่มจากอัปโหลดภาพที่ซ้อนทับกัน 2–10 ภาพ หรือเลือก “ใช้ภาพตัวอย่าง” เพื่อทดลองทันที")
+        st.info(f"เริ่มจากอัปโหลดภาพที่ซ้อนทับกัน 2–{MAX_IMAGES} ภาพ หรือเลือก “{SAMPLE_SOURCE}” เพื่อทดลองทันที")
         st.stop()
     for uploaded in uploaded_files:
         data = uploaded.getvalue()
@@ -148,10 +183,25 @@ if source == "อัปโหลดภาพของฉัน":
         names.append(f"{uploaded.name} ({original_size[0]}×{original_size[1]})")
         digests.append(hashlib.sha1(data).hexdigest())
 else:
-    images = demo_images()
-    names = [f"ภาพตัวอย่าง {index + 1}" for index in range(len(images))]
-    digests = [f"demo-{index}" for index in range(len(images))]
-    st.caption("ชุดภาพตัวอย่างสังเคราะห์ 4 ภาพ ถ่ายฉากเดียวกันจากหลายมุม แสงแต่ละภาพไม่เท่ากัน มีขอบภาพมืด และสลับลำดับไว้")
+    entries = []  # (ภาพ, ชื่อที่แสดง, key สำหรับ signature)
+    if sample_name == SYNTHETIC_SAMPLE:
+        entries = [(image, f"ภาพจำลอง {index + 1}", f"synthetic-{index}") for index, image in enumerate(demo_images())]
+        st.caption("ภาพจำลอง 4 ภาพของฉากเดียวกันจากหลายมุม แสงแต่ละภาพไม่เท่ากัน มีขอบภาพมืด และสลับลำดับไว้แล้ว")
+    else:
+        for path in samples[sample_name]:
+            image, original_size = load_image(path.read_bytes(), max_side)
+            entries.append((image, f"{path.name} ({original_size[0]}×{original_size[1]})", f"{sample_name}/{path.name}"))
+    if shuffle_samples:
+        entries = [entries[index] for index in shuffled_order(len(entries))]
+    if add_distractor:
+        other = next((name for name in samples if name != sample_name), None)
+        if other is not None:
+            path = samples[other][len(samples[other]) // 2]
+            image, _ = load_image(path.read_bytes(), max_side)
+            entries.insert(len(entries) // 2, (image, f"{other}/{path.name} · ภาพแปลกปลอม", f"{other}/{path.name}"))
+    images = [entry[0] for entry in entries]
+    names = [entry[1] for entry in entries]
+    digests = [entry[2] for entry in entries]
 
 if len(images) > MAX_IMAGES:
     st.warning(f"ใช้เฉพาะ {MAX_IMAGES} ภาพแรก (อัปโหลดมา {len(images)} ภาพ)")
