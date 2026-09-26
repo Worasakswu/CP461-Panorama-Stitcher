@@ -129,7 +129,7 @@ $$
 
 ### 6.1 ชุดภาพทดสอบจากอินเทอร์เน็ตและ edge case สำหรับ live demo
 
-กลุ่มตกลงใช้ **ภาพจากอินเทอร์เน็ต** แทนการถ่ายเอง โดยเก็บไว้ใน `test_images/` เป็นชุดพาโนรามา 5 ชุด และชุด edge case `textureless` 1 ชุด ภาพแต่ละชุดถ่ายจากจุดเดียวกันด้วยกล้องตัวเดียว เว็บดึงชุดเหล่านี้มาเป็นตัวเลือก “ใช้ชุดภาพตัวอย่าง” ได้ทันที หรือจะดาวน์โหลดไฟล์แล้วอัปโหลดผ่านปุ่มอัปโหลดตอนเดโมก็ได้ ต้องระบุแหล่งที่มาของทุกชุดในตาราง “ชุดภาพทดสอบ” ของ README ด้วย
+กลุ่มตกลงใช้ **ภาพจากอินเทอร์เน็ต** แทนการถ่ายเอง โดยเก็บไว้ใน `test_images/` เป็นชุดพาโนรามา 5 ชุด และชุด edge case `textureless` 1 ชุด ภาพแต่ละชุดถ่ายจากจุดเดียวกันด้วยกล้องตัวเดียว เว็บดึงชุดเหล่านี้มาเป็นตัวเลือก “ใช้ชุดภาพตัวอย่าง” ได้ทันที หรือจะดาวน์โหลดไฟล์แล้วอัปโหลดผ่านปุ่มอัปโหลดตอนเดโมก็ได้
 
 ผลในคอลัมน์ขวาสุดคือผลที่ได้จริงเมื่อทดสอบกับเว็บเวอร์ชันปัจจุบัน
 
@@ -158,17 +158,15 @@ $$
 - พาโนรามาใหญ่เกินหน่วยความจำ → ย่อผลลัพธ์ลงพร้อมแจ้งเปอร์เซ็นต์
 - Auto-crop ตัดพื้นที่ทิ้งเกินครึ่ง → แจ้งให้ปิด auto-crop เพื่อดูภาพเต็ม
 
-## 8. Responsibility split (5 members)
+## 8. Suggested five-person responsibility split
 
-การแบ่งหน้าที่ในการพูดนำเสนอ (คนละประมาณ 1:50 นาที) 
-
-| บทบาท | งานหลัก (ไฟล์) | ส่วนที่นำเสนอ | ช่วงเวลาในวิดีโอ | ผู้รับผิดชอบ |
-|---|---|---|---|---|
-| 1. Requirements + ชุดภาพทดสอบ | รวบรวมภาพจากอินเทอร์เน็ต + ระบุแหล่งที่มา, `test_images/` | Problem, objectives, pipeline, E1 | 0:00–1:50 | |
-| 2. Features + matching | `src/feature.py`, `src/visualize.py` | SIFT/ORB, ratio test, ภาพคู่จุด | 1:50–3:40 | |
-| 3. Geometry | `src/homography.py`, `src/stitcher.py` | RANSAC, verification, image graph, E2–E5 | 3:40–5:30 | |
-| 4. Warping + blending | `src/warping.py`, `src/blending.py` | Cylindrical, gain compensation, multi-band, E6–E7 | 5:30–7:20 | |
-| 5. Web + evaluation | `app.py`, `scripts/evaluate.py`, `tests/` | Engineering, deploy, ผลประเมิน, ข้อจำกัด (E8), สรุป | 7:20–9:30 | |
+| Member | Primary responsibility | Presentation section |
+|---|---|---|
+| 1 | Requirements and test-image collection | Problem and objectives |
+| 2 | SIFT/ORB, descriptors, KNN and ratio test | Keypoints and matching |
+| 3 | RANSAC, homography verification and image graph | Geometry and multi-image alignment |
+| 4 | Warping, exposure compensation and multi-band blending | Warping and blending |
+| 5 | Streamlit UI, deployment, testing and evaluation | Demo and conclusion |
 
 ## 9. Limitations and future work
 
@@ -180,61 +178,7 @@ $$
 - ยังไม่มี wave correction และการแก้ lens distortion
 - รองรับสูงสุด 8 ภาพต่อครั้ง และย่อภาพเหลือด้านยาว 1,200 px โดยค่าเริ่มต้นเพื่อให้ทำงานบน Streamlit Community Cloud ได้
 
-## 10. Rubric mapping and demo video
-
-### 10.1 เกณฑ์ให้คะแนน (10 คะแนน) กับหลักฐานในโปรเจกต์
-
-| เกณฑ์ (คะแนน) | สิ่งที่อาจารย์ดู | หลักฐานในโปรเจกต์ | แสดงตอนไหน |
-|---|---|---|---|
-| Algorithmic Correctness & Robustness (4) | SIFT/ORB, descriptor ratio test | Keypoints ต่อภาพ, ภาพ keypoints (สเกล + orientation), ตาราง good matches, ปรับ ratio ได้ | ผู้พูด 2 |
-| | RANSAC | เส้น inlier เขียว / outlier แดง, inlier ratio, RMSE, เมทริกซ์ Homography | ผู้พูด 3 |
-| | Failure cases / outliers | Verification ปฏิเสธคู่ที่ไม่ซ้อนทับ, ตัดภาพแปลกปลอม, error ที่อธิบายเหตุผล, Planar → Cylindrical | ผู้พูด 3–4 (E3–E5, E7) |
-| | Seamless output | Gain compensation + seam กลางส่วนซ้อนทับ + multi-band + auto-crop, แท็บเปรียบเทียบ Blending | ผู้พูด 4 (E6) |
-| Engineering & UI Implementation (3) | โครงสร้างโค้ด, abstraction | แยกโมดูลใน `src/` ตามขั้นตอน, `StitchSettings` / `StitchResult`, ชุดทดสอบ 30 ข้อ (รวมภาพจริง), สคริปต์ประเมินผล | ผู้พูด 5 |
-| | User experience + tier | Tier 3: Streamlit Cloud URL สาธารณะ, อัปโหลดหลายไฟล์, progress bar, คำเตือนภาษาไทย, ดาวน์โหลด PNG/JPG | ผู้พูด 1 และ 5 |
-| 10-Minute Presentation & Demo (3) | อธิบาย pipeline ชัดเจน (1.5) | แผนภาพข้อ 4 + อธิบายทีละขั้นตามลำดับ pipeline | ผู้พูด 1–5 |
-| | Live edge-case demo ด้วย custom test images (1.0) | ชุดภาพจากอินเทอร์เน็ตที่กลุ่มเลือกเอง E1–E8 ในข้อ 6.1 (ไม่ใช่ภาพจำลองในเว็บ) | ผู้พูด 1, 3, 4, 5 |
-| | ไม่เกิน 10 นาที + ทุกคนมีส่วนร่วม (0.5) | ตารางเวลาในข้อ 10.2 รวม 9:30 (เผื่อ 30 วินาที) | ทั้งกลุ่ม |
-
-### 10.2 แผนวิดีโอ (ต้องไม่เกิน 10:00 เด็ดขาด)
-
-| เวลา | ผู้พูด | เนื้อหา | สิ่งที่แสดงบนจอ |
-|---|---|---|---|
-| 0:00–1:50 | 1 | ปัญหา, วัตถุประสงค์, ภาพรวม pipeline, บอกว่าเป็น Tier 3, ที่มาของชุดภาพ | แผนภาพข้อ 4 → เปิดลิงก์เว็บจริง → อัปโหลด `house` (E1) → ผลลัพธ์ |
-| 1:50–3:40 | 2 | SIFT vs ORB, descriptor, KNN + ratio test | Keypoints ของ `house`, ตาราง good matches, ปรับ ratio 0.6/0.9, สลับ ORB |
-| 3:40–5:30 | 3 | RANSAC, verification, image graph, ภาพอ้างอิง | เส้นเขียว/แดง, เมทริกซ์ H → E2 (สลับลำดับ) → E3 (ภาพแปลกปลอม) → E4/E5 (error) |
-| 5:30–7:20 | 4 | Planar vs cylindrical, gain compensation, seam, multi-band | แท็บการวางภาพ → `city` (E7) → `cafe` (E6) + แท็บเปรียบเทียบ Blending |
-| 7:20–9:10 | 5 | โครงสร้างโค้ด, tests, deploy, ผลประเมิน, ข้อจำกัด | GitHub repo, ผล pytest, ตารางใน EVALUATION.md, `class` (E8 parallax) |
-| 9:10–9:30 | 5 (หรือทุกคน) | สรุป | สไลด์สรุป + รายชื่อสมาชิก |
-
-เคล็ดลับ: อัดแยกทีละช่วงแล้วตัดต่อ จะคุมเวลาได้ง่ายกว่าอัดรวดเดียว เว็บบน Streamlit Community Cloud จะหลับเมื่อไม่มีคนใช้สักพัก ให้เปิดปลุกไว้ก่อนอัด และกดสร้างพาโนรามาทุกชุดไว้หนึ่งรอบ เพื่อให้รู้ว่าแต่ละชุดใช้เวลาเท่าไร
-
-### 10.3 ประเด็นที่ควรพูดในเสียงบรรยาย (technical decisions)
-
-| การตัดสินใจ | เหตุผล | หลักฐาน |
-|---|---|---|
-| SIFT เป็นค่าเริ่มต้น, ORB เป็นตัวเลือก | SIFT ทนต่อสเกล/การหมุน และระบุตำแหน่งจุดแบบ sub-pixel | EVALUATION.md (ภาพสังเคราะห์ 3–5 ภาพ): SIFT สำเร็จ 20/20, corner error 0.54 px; ORB 4/20, 6.37 px |
-| Lowe's ratio 0.75 + ตัดคู่ที่ชี้จุดซ้ำ | ค่ามาตรฐานจาก Lowe (2004) ตัดคู่กำกวมในลวดลายซ้ำ | ปรับ ratio บนเว็บแล้วดูเส้นแดงเปลี่ยน |
-| RANSAC threshold 4 px, confidence 0.995 + verification | ต้องทนต่อ outliers และปฏิเสธคู่ภาพที่ไม่ได้ซ้อนทับจริง (inliers > 8 + 0.3·matches ตาม Brown & Lowe หรือ ≥ 100) | E3, E4, E5, E8 |
-| จับคู่ทุกคู่ภาพ + maximum spanning tree + ภาพอ้างอิงกลางโครงข่าย | ผู้ใช้ไม่ต้องเรียงลำดับ ใช้คู่ที่แม่นที่สุด และคูณเมทริกซ์ต่อกันน้อยที่สุด ภาพริมจึงยืดน้อย | E2, E3 |
-| Auto Planar → Cylindrical + ประมาณ focal จาก H | ระนาบเดียวรองรับมุมกว้างมากไม่ได้ (ภาพเลยเส้นขอบฟ้า) | E7 (`city`); เจอบั๊ก focal จากภาพจริงแล้วแก้ด้วยวิธี rotation residual (EVALUATION.md) |
-| Gain compensation (σg = 0.3) | มือถือปรับแสงแต่ละภาพต่างกัน | E6, ตาราง gain ในแท็บข้อมูลทางเทคนิค |
-| Seam กลางส่วนซ้อนทับ + multi-band แทน feather/วางทับ | วางทับเห็นขอบแข็ง, feather เบลอ/เงาซ้อนเมื่อ align ไม่สมบูรณ์, multi-band ผสมความถี่ต่ำกว้างแต่เก็บรายละเอียดคม | แท็บเปรียบเทียบ Blending; seam step ลด 41% เมื่อแสงต่างกัน |
-| ย่อภาพเหลือ 1,200 px + จำกัด canvas 12 MP + สูงสุด 8 ภาพ | ให้ทำงานได้เร็วใน RAM จำกัดของ Streamlit Community Cloud (จับคู่ทุกคู่ภาพ 8 ภาพ = 28 คู่) | เวลาแต่ละขั้นในแท็บข้อมูลทางเทคนิค |
-| ทดลอง global refinement แล้วไม่ใช้ | ทดลองแล้วไม่ช่วยให้แม่นขึ้น — แสดงว่าตัดสินใจจากข้อมูล | EVALUATION.md หัวข้อ “สิ่งที่ทดลองแล้วไม่ได้นำมาใช้” |
-
-### 10.4 Checklist ก่อนส่ง
-
-- [ ] ลิงก์ GitHub repo (public, มี `requirements.txt` และวิธีรันใน README)
-- [ ] ลิงก์เว็บจริง: ลองเปิดในหน้าต่าง incognito ว่าเข้าได้โดยไม่ต้อง login
-- [ ] ใส่ลิงก์แหล่งที่มาของทุกชุดภาพในตาราง “ชุดภาพทดสอบ” ของ README
-- [ ] ลอง E1–E8 กับเว็บจริงครบทุกข้อ
-- [ ] เติมชื่อผู้รับผิดชอบในตารางข้อ 8 ให้ครบ 5 คน
-- [ ] วิดีโอยาวไม่เกิน 10:00 (เช็กความยาวไฟล์จริงหลังตัดต่อ) มีเสียงบรรยายและ live demo
-- [ ] อัปโหลดวิดีโอเป็น YouTube (Unlisted) หรือ Google Drive (ตั้งค่า “ทุกคนที่มีลิงก์ดูได้”)
-- [ ] ทุกคนได้พูดในวิดีโอ และมีรายชื่อสมาชิกในสไลด์แรก/สุดท้าย
-
-## 11. References
+## 10. References
 
 - M. Brown and D. G. Lowe, “Automatic Panoramic Image Stitching using Invariant Features,” *IJCV*, 74(1), 2007.
 - D. G. Lowe, “Distinctive Image Features from Scale-Invariant Keypoints,” *IJCV*, 60(2), 2004.
